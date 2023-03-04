@@ -1,0 +1,116 @@
+services:
+  server:
+    image: traig-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.server
+    environment:
+      DEV_MODE: '1'
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: public
+    restart: always
+    ports:
+      - 80:80
+    networks:
+      traignetwork:
+        aliases:
+          - traigserver.io
+          - local.traigserver.io
+      default:
+        aliases:
+          - traigserver.io
+          - local.traigserver.io
+    depends_on:
+      postgres:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    healthcheck:
+      test: curl http://local.traigserver.io
+      interval: 3s
+      timeout: 5s
+      retries: 15
+
+  worker:
+    image: traig-worker
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    environment:
+      DEV_MODE: '1'
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: public
+      REPOS_DOWNLOAD_PATH: /repos
+    volumes:
+      - ./loaded_repos:/repos:rw
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      traignetwork:
+        aliases:
+          - traigworker.io
+      default:
+        aliases:
+          - traigworker.io
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  probe:
+    build:
+      context: ./probe
+    env_file:
+      - ./probe/.env
+    profiles: ['debug']
+#    command: sleep infinity
+    networks:
+      - traignetwork
+      - default
+    depends_on:
+      server:
+        condition: service_healthy
+      worker:
+        condition: service_started
+
+  postgres:
+    image: postgres
+    ports:
+      - 5432:5432
+    healthcheck:
+      test: pg_isready -U admin -d public
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: public
+    networks:
+      traignetwork:
+        aliases:
+          - postgres
+      default:
+        aliases:
+          - postgres
+
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
+    networks:
+      traignetwork:
+        aliases:
+          - redis
+
+networks:
+  traignetwork:
+    ipam:
+      driver: default
+      config:
+        - subnet: '172.19.0.0/16'
+    internal: true
