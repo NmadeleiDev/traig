@@ -119,3 +119,10 @@ networks:
       config:
         - subnet: ${TRAIGNETWORK_SUBNET}
     internal: true
+
+  default:
+    ipam:
+      driver: default
+      config:
+        - subnet: ${TRAIGNETWORK_SUBNET}
+    internal: true
