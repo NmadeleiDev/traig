@@ -117,5 +117,5 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: '172.19.0.0/16'
+        - subnet: ${TRAIGNETWORK_SUBNET}
     internal: true
