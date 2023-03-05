@@ -129,5 +129,5 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: ${TRAIGNETWORK_SUBNET}
+        - subnet: ${DOCKER_NETWORK_SUBNET}
     internal: true
