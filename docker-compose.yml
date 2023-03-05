@@ -6,11 +6,11 @@ services:
       dockerfile: Dockerfile.server
     environment:
       DEV_MODE: ${DEV_MODE}
-      POSTGRES_HOST: postgres
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: public
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
     restart: always
     env_file:
       - .env
@@ -39,13 +39,15 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.worker
+    env_file:
+      - .env
     environment:
       DEV_MODE: ${DEV_MODE}
-      POSTGRES_HOST: postgres
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: public
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
       REPOS_DOWNLOAD_PATH: /repos
     volumes:
       - ./loaded_repos:/repos:rw
@@ -87,10 +89,12 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: public
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     networks:
       traignetwork:
         aliases:
