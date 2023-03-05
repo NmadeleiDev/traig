@@ -1,6 +1,9 @@
 from celery import Celery
 
-app = Celery("tasks", broker="redis://redis:6379/0", include=["tasks.tasks"])
+redis_url = "redis://redis:6379/0"
+
+app = Celery("tasks", broker=redis_url, include=["tasks.tasks"])
+app.conf.result_backend = redis_url
 
 if __name__ == "__main__":
     app.start()

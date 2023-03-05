@@ -8,6 +8,7 @@ from ipaddress import IPv4Network
 import sqlalchemy.exc
 import sqlmodel
 from db import local_session
+from db.create_view import create_metrics_view
 from exception import ClientFailure, ServerFailure
 from github import GithubClient
 from model import Account, Commit, MetricTypeEnum, MetricUpdate, Repo, RunConfig
@@ -104,7 +105,7 @@ def mode(vals: list):
     return result[0] if len(result) == 1 else result
 
 
-def generate_run_result_and_delete_updates(run_config: RunConfig, run_ok: bool):
+def save_run_result_and_delete_updates(run_config: RunConfig, run_ok: bool):
     with local_session() as session:
         session_updates = session.exec(
             sqlmodel.select(MetricUpdate)
@@ -234,9 +235,15 @@ def execute_compose_in_commit_repo(commit_dir_path: str, commit_id: int):
     with local_session() as session:
         run_config = session.get(RunConfig, run_config.id)
 
-        generate_run_result_and_delete_updates(run_config, run_ok)
+        save_run_result_and_delete_updates(run_config, run_ok)
 
         session.delete(run_config)
         session.commit()
 
     shutil.rmtree(commit_dir_path)
+
+
+@app.task
+def create_result_metrics_view(group_result, repo_id: int):
+    with local_session() as session:
+        create_metrics_view(session.get(Repo, repo_id), session)

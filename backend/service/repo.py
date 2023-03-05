@@ -1,17 +1,20 @@
 import logging
+import os
 from datetime import datetime
+from functools import partial
 
 import sqlmodel
 from apscheduler.triggers.interval import IntervalTrigger
-from celery import chain, group
+from celery import chain, group, chord
 from db import local_session
+from db.create_view import create_metrics_view
 from exception import ClientFailure
 from github import GithubClient
 from model import Account, Commit, Repo, RepoWrite
 from scheduler import get_jobs_scheduler
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Session
-from tasks.tasks import download_commit, execute_compose_in_commit_repo
+from tasks.tasks import download_commit, execute_compose_in_commit_repo, create_result_metrics_view
 
 
 def add_repo(body: RepoWrite, account: Account, session: Session):
@@ -20,14 +23,16 @@ def add_repo(body: RepoWrite, account: Account, session: Session):
     session.commit()
     session.refresh(repo)
 
-    get_jobs_scheduler().add_job(
-        check_repo_commits,
-        trigger=IntervalTrigger(minutes=5),
-        id=f"repo={repo.id}_acc={account.id}",
-        replace_existing=True,
-        next_run_time=datetime.now(),
-    )
-    check_repo_commits(repo.id)
+    if os.getenv('DEV_MODE', '0') == '1':
+        check_repo_commits(repo.id)
+    else:
+        get_jobs_scheduler().add_job(
+            check_repo_commits,
+            trigger=IntervalTrigger(minutes=5),
+            id=f"repo={repo.id}_acc={account.id}",
+            replace_existing=True,
+            next_run_time=datetime.now(),
+        )
 
     return repo
 
@@ -73,13 +78,13 @@ def _check_repo_commits(repo_id: int, session: Session):
         f"not_processed_commits: {[(x.id, x.message) for x in not_processed_commits]}"
     )
 
-    group(
+    chord(
         chain(
             download_commit.s(repo.account.id, not_processed_commit.id),
             execute_compose_in_commit_repo.s(not_processed_commit.id),
         )
         for not_processed_commit in not_processed_commits
-    )()
+    )(create_result_metrics_view.s(repo_id)).get()
 
 
 def update_repo(

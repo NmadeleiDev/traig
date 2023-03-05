@@ -5,15 +5,17 @@ services:
       context: ./backend
       dockerfile: Dockerfile.server
     environment:
-      DEV_MODE: '1'
+      DEV_MODE: ${DEV_MODE}
       POSTGRES_HOST: postgres
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password
       POSTGRES_PORT: 5432
       POSTGRES_DB: public
     restart: always
+    env_file:
+      - .env
     ports:
-      - 80:80
+      - ${SERVER_PORT}:80
     networks:
       traignetwork:
         aliases:
@@ -24,8 +26,6 @@ services:
           - traigserver.io
           - local.traigserver.io
     depends_on:
-      postgres:
-        condition: service_healthy
       worker:
         condition: service_started
     healthcheck:
@@ -40,7 +40,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile.worker
     environment:
-      DEV_MODE: '1'
+      DEV_MODE: ${DEV_MODE}
       POSTGRES_HOST: postgres
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password
@@ -58,8 +58,8 @@ services:
         aliases:
           - traigworker.io
     depends_on:
-      postgres:
-        condition: service_healthy
+      redis:
+        condition: service_started
 
   probe:
     build:
@@ -79,6 +79,7 @@ services:
 
   postgres:
     image: postgres
+    profiles: ['debug']
     ports:
       - 5432:5432
     healthcheck:
