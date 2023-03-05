@@ -1,13 +1,11 @@
 import logging
 import os
 from datetime import datetime
-from functools import partial
 
 import sqlmodel
 from apscheduler.triggers.interval import IntervalTrigger
-from celery import chain, chord, group
+from celery import chain, chord
 from db import local_session
-from db.create_view import create_metrics_view
 from exception import ClientFailure
 from github import GithubClient
 from model import Account, Commit, Repo, RepoWrite
