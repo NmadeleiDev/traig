@@ -55,9 +55,6 @@ services:
       - ./loaded_repos:/repos:rw
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      traignetwork:
-        aliases:
-          - traigworker.io
       default:
         aliases:
           - traigworker.io
@@ -75,7 +72,6 @@ services:
     profiles: ['debug']
 #    command: sleep infinity
     networks:
-      - traignetwork
       - default
     depends_on:
       server:
@@ -100,9 +96,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     networks:
-      traignetwork:
-        aliases:
-          - postgres
       default:
         aliases:
           - postgres
@@ -112,22 +105,19 @@ services:
     ports:
       - 6379:6379
     networks:
-      traignetwork:
+      default:
         aliases:
           - redis
 
 networks:
   traignetwork:
     ipam:
-      driver: default
       config:
         - subnet: ${TRAIGNETWORK_SUBNET}
     internal: true
 
   default:
-    driver: bridge
     ipam:
-      driver: default
       config:
         - subnet: ${DOCKER_NETWORK_SUBNET}
     internal: true
