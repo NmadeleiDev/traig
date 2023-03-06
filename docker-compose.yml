@@ -100,8 +100,8 @@ networks:
         - subnet: ${TRAIGNETWORK_SUBNET}
     internal: true
 
-#  default:
-#    ipam:
-#      config:
-#        - subnet: ${DOCKER_NETWORK_SUBNET}
-#    internal: true
+  default:
+    ipam:
+      config:
+        - subnet: ${DOCKER_NETWORK_SUBNET}
+    internal: true
