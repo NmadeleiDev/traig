@@ -16,6 +16,17 @@ class MetricTypeEnum(str, Enum):
     count = "count"  # return number of updates of the metric (actual update values does not matter)
 
 
+class TraigStubClient:
+    def __init__(self):
+        pass
+
+    def init_metrics(self, **metrics):
+        pass
+
+    def update_metrics(self, **metric_values):
+        pass
+
+
 class TraigClient:
     def __init__(self):
         self.traig_server_url = 'http://traigserver.io'
