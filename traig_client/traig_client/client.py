@@ -1,4 +1,5 @@
 import logging
+import os
 from enum import Enum
 
 import requests
@@ -69,3 +70,13 @@ class TraigClient:
             return
 
         requests.post(f'{self.traig_server_url}/metric/update', json={'data': metric_values})
+
+
+def get_client() -> TraigClient | TraigStubClient:
+    if not hasattr(get_client, 'traig_client'):
+        if os.getenv('TRAIG_SESSION', '0') == '1':
+            get_client.traig_client = TraigClient()
+        else:
+            get_client.traig_client = TraigStubClient()
+
+    return get_client.traig_client
