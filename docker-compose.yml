@@ -20,6 +20,7 @@ services:
       traignetwork:
         aliases:
           - local.traigserver.io
+          - traigserver.io
       default:
         aliases:
           - local.traigserver.io
@@ -98,10 +99,8 @@ networks:
     ipam:
       config:
         - subnet: ${TRAIGNETWORK_SUBNET}
-    internal: true
 
   default:
     ipam:
       config:
         - subnet: ${DOCKER_NETWORK_SUBNET}
-    internal: true
