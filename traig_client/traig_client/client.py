@@ -3,7 +3,7 @@ import os
 from enum import Enum
 
 import requests
-from exceptions import ClientNotInitialized
+from traig_client.exceptions import ClientNotInitialized
 
 
 class MetricTypeEnum(str, Enum):
