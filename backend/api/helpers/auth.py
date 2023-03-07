@@ -68,8 +68,10 @@ def add_auth_cookie_to_response(
     domain = request.base_url.hostname
     if dev_mode:
         pass
+    elif domain.endswith('.traig.space') or domain == 'traig.space':
+        pass
     else:
-        logging.debug(f"Not setting auth cookie as domain is not dation.*: {domain}")
+        logging.debug(f"Not setting auth cookie as domain is not traig.*: {domain}")
         return
 
     response.set_cookie(
