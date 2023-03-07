@@ -105,7 +105,7 @@ def mode(vals: list):
     return result[0] if len(result) == 1 else result
 
 
-def save_run_result_and_delete_updates(run_config: RunConfig, run_ok: bool):
+def save_run_result_and_delete_updates(run_config: RunConfig, run_ok: bool, err_str: str = None):
     with local_session() as session:
         session_updates = session.exec(
             sqlmodel.select(MetricUpdate)
@@ -165,6 +165,7 @@ def save_run_result_and_delete_updates(run_config: RunConfig, run_ok: bool):
         commit.json_run_result = result
         commit.run_ok = run_ok
         commit.processed = True
+        commit.run_error = err_str
 
         session.add(commit)
         for session_update in session_updates:
