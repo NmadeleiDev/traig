@@ -1,0 +1,2 @@
+class ClientNotInitialized(Exception):
+    pass

@@ -2,9 +2,10 @@ import logging
 from enum import Enum
 
 import requests
+from exceptions import ClientNotInitialized
 
 
-class MetricTypeEnum(str, Enum):
+class _MetricTypeEnum(str, Enum):
     value = "value"  # simply store latest value assigned
     max = "max"  # return maximum
     min = "min"  # return minimum
@@ -15,18 +16,14 @@ class MetricTypeEnum(str, Enum):
     count = "count"  # return number of updates of the metric (actual update values does not matter)
 
 
-class ClientNotInitialized(Exception):
-    pass
-
-
-class TraigClient:
+class _TraigClient:
     def __init__(self):
         self.traig_server_url = 'http://traigserver.io'
         self.metrics = {}
         self.is_initialized = False
 
     def init_metrics(self, **metrics):
-        metric_types = [m.value for m in MetricTypeEnum]
+        metric_types = [m.value for m in _MetricTypeEnum]
         for k, v in metrics.items():
             if k not in metric_types:
                 logging.warning(f'metric type "{v}" for metric "{k}" is not understood, will ignore it. '
