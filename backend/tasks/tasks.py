@@ -105,7 +105,7 @@ def mode(vals: list):
     return result[0] if len(result) == 1 else result
 
 
-def save_run_result_and_delete_updates(run_config: RunConfig, run_ok: bool):
+def save_run_result_and_delete_updates(run_config: RunConfig, run_ok: bool, err_str: str = None):
     with local_session() as session:
         session_updates = session.exec(
             sqlmodel.select(MetricUpdate)
@@ -165,6 +165,7 @@ def save_run_result_and_delete_updates(run_config: RunConfig, run_ok: bool):
         commit.json_run_result = result
         commit.run_ok = run_ok
         commit.processed = True
+        commit.run_error = err_str
 
         session.add(commit)
         for session_update in session_updates:
@@ -225,17 +226,19 @@ def execute_compose_in_commit_repo(commit_dir_path: str, commit_id: int):
     run_config = register_run_config_with_available_ip_address_for_commit(commit_id)
 
     run_ok = False
+    run_err = None
     try:
         run_docker_cmd(commit_dir_path, run_config.client_ip, repo)
         run_ok = True
     except Exception as e:
         logging.error(f"failed to run container for commit: {e}")
+        run_err = str(e)
     logging.debug(f"finished container execution for commit_id={commit_id}")
 
     with local_session() as session:
         run_config = session.get(RunConfig, run_config.id)
 
-        save_run_result_and_delete_updates(run_config, run_ok)
+        save_run_result_and_delete_updates(run_config, run_ok, run_err)
 
         session.delete(run_config)
         session.commit()

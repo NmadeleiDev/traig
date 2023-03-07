@@ -84,6 +84,7 @@ class Commit(SQLBase, table=True):
     json_run_result: Optional[dict] = sqlmodel.Field(
         sa_column=sqlmodel.Column(sqlmodel.JSON(), nullable=True)
     )
+    run_error: Optional[str] = sqlmodel.Field(default=None)
 
 
 class MetricUpdate(SQLBase, table=True):
