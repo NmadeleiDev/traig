@@ -1,7 +1,7 @@
-from client import _TraigClient
+from client import TraigClient
 
 
-def get_client() -> _TraigClient:
+def get_client() -> TraigClient:
     if not hasattr(get_client, 'traig_client'):
-        get_client.traig_client = _TraigClient()
+        get_client.traig_client = TraigClient()
     return get_client.traig_client
