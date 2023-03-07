@@ -8,7 +8,7 @@ from celery import chain, chord
 from db import local_session
 from exception import ClientFailure
 from github import GithubClient
-from model import Account, Commit, Repo, RepoWrite
+from model import Account, Commit, Repo, RepoWrite, RunConfig
 from scheduler import get_jobs_scheduler
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Session
@@ -75,6 +75,9 @@ def _check_repo_commits(repo_id: int, session: Session):
             Commit.repo_id == repo_id, Commit.processed == False
         )
     ).all()
+
+    not_processed_commits = [c for c in not_processed_commits if
+                             session.exec(sqlmodel.select(RunConfig).where(RunConfig.commit_id == c.id)).all() == []]
 
     logging.debug(
         f"not_processed_commits: {[(x.id, x.message) for x in not_processed_commits]}"
