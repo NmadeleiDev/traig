@@ -84,13 +84,14 @@ def _check_repo_commits(repo_id: int, session: Session):
         f"not_processed_commits: {[(x.id, x.message) for x in not_processed_commits]}"
     )
 
-    chord(
-        chain(
-            download_commit.s(repo.account.id, not_processed_commit.id),
-            execute_compose_in_commit_repo.s(not_processed_commit.id),
-        )
-        for not_processed_commit in not_processed_commits
-    )(create_result_metrics_view.s(repo_id)).get()
+    if len(not_processed_commits) > 0:
+        chord(
+            chain(
+                download_commit.s(repo.account.id, not_processed_commit.id),
+                execute_compose_in_commit_repo.s(not_processed_commit.id),
+            )
+            for not_processed_commit in not_processed_commits
+        )(create_result_metrics_view.s(repo_id))
 
 
 def update_repo(

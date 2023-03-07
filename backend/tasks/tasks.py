@@ -14,6 +14,8 @@ from github import GithubClient
 from model import Account, Commit, MetricTypeEnum, MetricUpdate, Repo, RunConfig
 from tasks.celery import app
 
+import tempfile
+
 docker_network_name = os.getenv("DOCKER_NETWORK_NAME", "traig_traignetwork")
 
 
@@ -56,18 +58,35 @@ def run_docker_cmd(commit_dir_path: str, container_ip: str, repo: Repo):
         f"docker rm -f {container_name}", shell=True, check=False, cwd=commit_dir_path
     )
 
-    subprocess.run(
-        f"docker run "
-        f"--network={docker_network_name} "
-        f"--network-alias={commit_ref}.io "
-        f"--ip={container_ip} "
-        f"--name {container_name} "
-        f"--rm "
-        f"{image_name}",
-        shell=True,
-        cwd=commit_dir_path,
-        check=True,
-    )
+    stdout = tempfile.TemporaryFile()
+    stderr = tempfile.TemporaryFile()
+
+    try:
+        subprocess.run(
+            f"docker run "
+            f"--network={docker_network_name} "
+            f"--network-alias={commit_ref}.io "
+            f"--ip={container_ip} "
+            f"--name {container_name} "
+            f"--rm "
+            f"{image_name}",
+            shell=True,
+            cwd=commit_dir_path,
+            check=True,
+            stdout=stdout,
+            stderr=stderr,
+            timeout=60*10  # TODO продумать
+        )
+    except TimeoutError:
+        pass
+
+    stdout_str = stdout.read()  # TODO: поставить ограничение на размер лога
+    stderr_str = stdout.read()
+
+    stdout.close()
+    stderr.close()
+
+    return stdout_str.decode('utf-8'), stderr_str.decode('utf-8')
 
 
 @app.task
@@ -105,7 +124,8 @@ def mode(vals: list):
     return result[0] if len(result) == 1 else result
 
 
-def save_run_result_and_delete_updates(run_config: RunConfig, run_ok: bool, err_str: str = None):
+def save_run_result_and_delete_updates(run_config: RunConfig, run_ok: bool,
+                                       err_str: str = None, stdout: str = None, stderr: str = None):
     with local_session() as session:
         session_updates = session.exec(
             sqlmodel.select(MetricUpdate)
@@ -166,6 +186,8 @@ def save_run_result_and_delete_updates(run_config: RunConfig, run_ok: bool, err_
         commit.run_ok = run_ok
         commit.processed = True
         commit.run_error = err_str
+        commit.container_stdout = stdout
+        commit.container_stderr = stderr
 
         session.add(commit)
         for session_update in session_updates:
@@ -226,9 +248,9 @@ def execute_compose_in_commit_repo(commit_dir_path: str, commit_id: int):
     run_config = register_run_config_with_available_ip_address_for_commit(commit_id)
 
     run_ok = False
-    run_err = None
+    run_err, stdout, stderr = None, None, None
     try:
-        run_docker_cmd(commit_dir_path, run_config.client_ip, repo)
+        stdout, stderr = run_docker_cmd(commit_dir_path, run_config.client_ip, repo)
         run_ok = True
     except Exception as e:
         logging.error(f"failed to run container for commit: {e}")
@@ -238,7 +260,7 @@ def execute_compose_in_commit_repo(commit_dir_path: str, commit_id: int):
     with local_session() as session:
         run_config = session.get(RunConfig, run_config.id)
 
-        save_run_result_and_delete_updates(run_config, run_ok, run_err)
+        save_run_result_and_delete_updates(run_config, run_ok, run_err, stdout, stderr)
 
         session.delete(run_config)
         session.commit()
