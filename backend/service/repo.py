@@ -30,6 +30,7 @@ def add_repo(body: RepoWrite, account: Account, session: Session):
     else:
         get_jobs_scheduler().add_job(
             check_repo_commits,
+            args=(repo.id, ),
             trigger=IntervalTrigger(minutes=5),
             id=f"repo={repo.id}_acc={account.id}",
             replace_existing=True,
