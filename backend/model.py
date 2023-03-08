@@ -84,6 +84,7 @@ class Commit(SQLBase, table=True):
     json_run_result: Optional[dict] = sqlmodel.Field(
         sa_column=sqlmodel.Column(sqlmodel.JSON(), nullable=True)
     )
+    run_finished_at: Optional[datetime.datetime] = sqlmodel.Field(default=None)
     run_error: Optional[str] = sqlmodel.Field(default=None)
     container_stdout: Optional[str] = sqlmodel.Field(default=None)
     container_stderr: Optional[str] = sqlmodel.Field(default=None)

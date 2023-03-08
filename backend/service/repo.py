@@ -30,7 +30,7 @@ def add_repo(body: RepoWrite, account: Account, session: Session):
     else:
         get_jobs_scheduler().add_job(
             check_repo_commits,
-            args=(repo.id, ),
+            args=(repo.id,),
             trigger=IntervalTrigger(minutes=5),
             id=f"repo={repo.id}_acc={account.id}",
             replace_existing=True,
@@ -77,8 +77,14 @@ def _check_repo_commits(repo_id: int, session: Session):
         )
     ).all()
 
-    not_processed_commits = [c for c in not_processed_commits if
-                             session.exec(sqlmodel.select(RunConfig).where(RunConfig.commit_id == c.id)).all() == []]
+    not_processed_commits = [
+        c
+        for c in not_processed_commits
+        if session.exec(
+            sqlmodel.select(RunConfig).where(RunConfig.commit_id == c.id)
+        ).all()
+        == []
+    ]
 
     logging.debug(
         f"not_processed_commits: {[(x.id, x.message) for x in not_processed_commits]}"
