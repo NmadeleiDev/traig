@@ -55,7 +55,7 @@ def run_docker_cmd(commit_dir_path: str, container_ip: str, repo: Repo):
     image_name = commit_ref + "-traigsession"
     container_name = f"{image_name}-1"
     subprocess.run(
-        f"docker compose -f {repo.traig_compose_file_path_from_repo_root} build",
+        f"docker compose -f {repo.traig_compose_file_path_from_repo_root} build --no-cache",
         shell=True,
         cwd=commit_dir_path,
         check=True,
