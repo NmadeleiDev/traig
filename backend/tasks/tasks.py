@@ -36,6 +36,12 @@ def get_traig_docker_network_subnet() -> tuple[str, list[str]]:
     return network_subnet, reserved_ips
 
 
+def rm_f_container(container_name: str, commit_dir_path: str):
+    subprocess.run(
+        f"docker rm -f {container_name}", shell=True, check=False, cwd=commit_dir_path
+    )
+
+
 def run_docker_cmd(commit_dir_path: str, container_ip: str, repo: Repo):
     if not os.path.isfile(
         os.path.join(commit_dir_path, repo.traig_compose_file_path_from_repo_root)
@@ -54,9 +60,7 @@ def run_docker_cmd(commit_dir_path: str, container_ip: str, repo: Repo):
         cwd=commit_dir_path,
         check=True,
     )
-    subprocess.run(
-        f"docker rm -f {container_name}", shell=True, check=False, cwd=commit_dir_path
-    )
+    rm_f_container(container_name, commit_dir_path)
 
     stdout = tempfile.TemporaryFile()
     stderr = tempfile.TemporaryFile()
@@ -83,6 +87,8 @@ def run_docker_cmd(commit_dir_path: str, container_ip: str, repo: Repo):
         is_interrupted = True
     except Exception as e:
         exc_str = str(e)
+
+    rm_f_container(container_name, commit_dir_path)
 
     stdout.seek(0)
     stderr.seek(0)
