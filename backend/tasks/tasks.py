@@ -66,7 +66,7 @@ def run_docker_cmd(commit_dir_path: str, container_ip: str, repo: Repo):
     try:
         subprocess.run(
             [
-                "docker run "
+                "docker run --env TRAIG_SESSION=1 "
                 f"--network={docker_network_name} "
                 f"--ip={container_ip} "
                 f"--name {container_name} "
@@ -191,7 +191,6 @@ def save_run_result_and_delete_updates(
                 f"seems like metrics were not initialized for commit_id={run_config.commit_id}, "
                 f"run_config_id={run_config.id}"
             )
-            run_ok = False
 
         commit = session.get(Commit, run_config.commit_id)
 
