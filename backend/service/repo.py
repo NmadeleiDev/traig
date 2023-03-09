@@ -19,6 +19,22 @@ from tasks.tasks import (
 )
 
 
+def add_check_commits_job_if_not_present(repo_id: int, account_id: int):
+    job_id = f"check_repo_commits__repo={repo_id}_acc={account_id}"
+
+    if get_jobs_scheduler().get_job(job_id) is not None:
+        return
+
+    get_jobs_scheduler().add_job(
+            check_repo_commits,
+            args=(repo_id,),
+            trigger=IntervalTrigger(minutes=5),
+            id=job_id,
+            replace_existing=True,
+            next_run_time=datetime.now(),
+        )
+
+
 def add_repo(body: RepoWrite, account: Account, session: Session):
     repo = Repo(**body.dict(), account_id=account.id)
     session.add(repo)
@@ -28,14 +44,7 @@ def add_repo(body: RepoWrite, account: Account, session: Session):
     if os.getenv("DEV_MODE", "0") == "1":
         check_repo_commits(repo.id)
     else:
-        get_jobs_scheduler().add_job(
-            check_repo_commits,
-            args=(repo.id,),
-            trigger=IntervalTrigger(minutes=5),
-            id=f"repo={repo.id}_acc={account.id}",
-            replace_existing=True,
-            next_run_time=datetime.now(),
-        )
+        add_check_commits_job_if_not_present(repo.id, account.id)
 
     return repo
 
@@ -52,6 +61,8 @@ def _check_repo_commits(repo_id: int, session: Session):
     # TODO: предусмотреть одновременный вызов этой функции из разный мест - тогда вызовется
     #  одновременный прогон контейнров, что нехорошо
     repo = session.get(Repo, repo_id)
+
+    add_check_commits_job_if_not_present(repo.id, repo.account_id)
 
     github = GithubClient(repo.account.github_personal_api_token)
 
