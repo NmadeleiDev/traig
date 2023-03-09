@@ -79,7 +79,7 @@ def run_docker_cmd(commit_dir_path: str, container_ip: str, repo: Repo):
             stderr=stderr,
             timeout=60 * 10,  # TODO продумать
         )
-    except TimeoutError:
+    except subprocess.TimeoutExpired:
         is_interrupted = True
     except Exception as e:
         exc_str = str(e)
