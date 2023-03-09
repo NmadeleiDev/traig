@@ -277,7 +277,7 @@ def execute_compose_in_commit_repo(commit_dir_path: str, commit_id: int):
         run_err = str(e)
         run_ok = False
     else:
-        run_ok = True
+        run_ok = run_err is None
     logging.debug(f"finished container execution for commit_id={commit_id}")
 
     with local_session() as session:
