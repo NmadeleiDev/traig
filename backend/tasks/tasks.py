@@ -61,6 +61,7 @@ def run_docker_cmd(commit_dir_path: str, container_ip: str, repo: Repo):
     stdout = tempfile.TemporaryFile()
     stderr = tempfile.TemporaryFile()
     exc_str = None
+    is_interrupted = False
 
     try:
         subprocess.run(
@@ -79,7 +80,7 @@ def run_docker_cmd(commit_dir_path: str, container_ip: str, repo: Repo):
             timeout=60 * 10,  # TODO продумать
         )
     except TimeoutError:
-        pass
+        is_interrupted = True
     except Exception as e:
         exc_str = str(e)
 
@@ -92,7 +93,7 @@ def run_docker_cmd(commit_dir_path: str, container_ip: str, repo: Repo):
     stdout.close()
     stderr.close()
 
-    return stdout_str.decode("utf-8"), stderr_str.decode("utf-8"), exc_str
+    return stdout_str.decode("utf-8"), stderr_str.decode("utf-8"), exc_str, is_interrupted
 
 
 @app.task
@@ -133,9 +134,10 @@ def mode(vals: list):
 def save_run_result_and_delete_updates(
     run_config: RunConfig,
     run_ok: bool,
-    err_str: str = None,
-    stdout: str = None,
-    stderr: str = None,
+    err_str: str | None,
+    stdout: str | None,
+    stderr: str | None,
+    is_interrupted: bool
 ):
     with local_session() as session:
         session_updates = session.exec(
@@ -200,6 +202,7 @@ def save_run_result_and_delete_updates(
         commit.container_stdout = stdout
         commit.container_stderr = stderr
         commit.run_finished_at = datetime.now()
+        commit.is_interrupted = is_interrupted
 
         session.add(commit)
         for session_update in session_updates:
@@ -259,22 +262,23 @@ def execute_compose_in_commit_repo(commit_dir_path: str, commit_id: int):
 
     run_config = register_run_config_with_available_ip_address_for_commit(commit_id)
 
-    run_ok = False
-    run_err, stdout, stderr = None, None, None
+    run_err, stdout, stderr, is_interrupted = None, None, None, False
     try:
-        stdout, stderr, run_err = run_docker_cmd(
+        stdout, stderr, run_err, is_interrupted = run_docker_cmd(
             commit_dir_path, run_config.client_ip, repo
         )
-        run_ok = True
     except Exception as e:
         logging.error(f"failed to run container for commit: {e}")
         run_err = str(e)
+        run_ok = False
+    else:
+        run_ok = True
     logging.debug(f"finished container execution for commit_id={commit_id}")
 
     with local_session() as session:
         run_config = session.get(RunConfig, run_config.id)
 
-        save_run_result_and_delete_updates(run_config, run_ok, run_err, stdout, stderr)
+        save_run_result_and_delete_updates(run_config, run_ok, run_err, stdout, stderr, is_interrupted)
 
         session.delete(run_config)
         session.commit()

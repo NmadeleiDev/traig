@@ -88,6 +88,7 @@ class Commit(SQLBase, table=True):
     run_error: Optional[str] = sqlmodel.Field(default=None)
     container_stdout: Optional[str] = sqlmodel.Field(default=None)
     container_stderr: Optional[str] = sqlmodel.Field(default=None)
+    is_interrupted: Optional[bool] = sqlmodel.Field(default=None)
 
 
 class MetricUpdate(SQLBase, table=True):
