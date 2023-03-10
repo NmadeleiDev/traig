@@ -86,7 +86,7 @@ def add_auth_cookie_to_response(
 
 
 def remove_auth_cookie_from_response(request: Request, response: Response):
-    dev_mode = os.environ["DEV_MODE"] == "on"
+    dev_mode = os.environ["DEV_MODE"] == "1"
 
     domain = request.base_url.hostname
     if dev_mode:

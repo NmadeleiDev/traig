@@ -12,7 +12,7 @@ import sqlmodel
 from db import local_session
 from db.create_view import create_metrics_view
 from exception import ClientFailure, ServerFailure
-from github import GithubClient
+from git.github import GithubClient
 from model import Account, Commit, MetricTypeEnum, MetricUpdate, Repo, RunConfig
 from tasks.celery import app
 
@@ -51,8 +51,8 @@ def run_docker_cmd(commit_dir_path: str, container_ip: str, repo: Repo):
             f"file {repo.traig_compose_file_path_from_repo_root} not found is {commit_dir_path}"
         )
 
-    commit_ref = os.path.basename(commit_dir_path).lower()
-    image_name = commit_ref + "-traigsession"
+    parent_dir_name = os.path.basename(commit_dir_path).lower()
+    image_name = parent_dir_name + "-" + repo.reporting_docker_services_name
     container_name = f"{image_name}-1"
     subprocess.run(
         f"docker compose -f {repo.traig_compose_file_path_from_repo_root} build --no-cache",
@@ -113,12 +113,12 @@ def download_commit(account_id: int, commit_id: int):
         if not commit:
             raise ServerFailure(f"commit not found for id: {commit_id}")
 
-        repo = commit.repo
+        repo = commit.branch.repo
 
         github = GithubClient(account.github_personal_api_token)
         commit_dir_path = github.download_and_unzip_commit(commit)
 
-    return os.path.join(commit_dir_path, f"{repo.owner}-{repo.name}-{commit.ref}")
+    return os.path.join(commit_dir_path, f"{repo.owner}-{repo.name}-{commit.sha}")
 
 
 def mode(vals: list):
@@ -263,7 +263,7 @@ def execute_compose_in_commit_repo(commit_dir_path: str, commit_id: int):
 
     with local_session() as session:
         commit = session.get(Commit, commit_id)
-        repo = commit.repo
+        repo = commit.branch.repo
 
     run_config = register_run_config_with_available_ip_address_for_commit(commit_id)
 

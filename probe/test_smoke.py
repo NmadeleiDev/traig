@@ -64,7 +64,7 @@ def test_smoke(client, email):
             break
 
     count_success = 0
-    for _ in poll_for("stats ready", ttl=60):
+    for _ in poll_for("stats ready", ttl=60 * 3):
         stats = get_statistics(client, repo["id"])
         assert len(stats) > 0
 
@@ -82,3 +82,7 @@ def test_smoke(client, email):
             break
 
     assert count_success > 0
+
+    commit_to_test = [c for c in get_statistics(client, repo["id"]) if c['message'] == 'added print'][0]
+
+    assert commit_to_test['container_stdout'].strip() == 'test!'

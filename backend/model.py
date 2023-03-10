@@ -48,7 +48,7 @@ class Repo(SQLBase, table=True):
     account: Account = Relationship(
         back_populates="repos", sa_relationship_kwargs={"cascade": "delete"}
     )
-    commits: list["Commit"] = Relationship(
+    branches: list["Branch"] = Relationship(
         back_populates="repo", sa_relationship_kwargs={"cascade": "delete"}
     )
     account_id: int = sqlmodel.Field(foreign_key="account.id")
@@ -66,18 +66,32 @@ class RepoWrite(pydantic.BaseModel):
     name: str
 
 
+class Branch(SQLBase, table=True):
+    name: str
+    sha: str
+
+    commits: list["Commit"] = Relationship(
+        back_populates="branch", sa_relationship_kwargs={"cascade": "delete"}
+    )
+
+    repo: Repo = Relationship(
+        back_populates="branches", sa_relationship_kwargs={"cascade": "delete"}
+    )
+    repo_id: int = sqlmodel.Field(foreign_key="repo.id")
+
+
 class Commit(SQLBase, table=True):
     __table_args__ = (
-        UniqueConstraint("ref", "repo_id", name="repo_id_ref_constraint"),
+        UniqueConstraint("sha", "branch_id", name="branch_id_sha_constraint"),
     )
-    ref: str
+    sha: str
     committed_datetime: datetime.datetime
     message: str
 
-    repo: Repo = Relationship(
+    branch: Branch = Relationship(
         back_populates="commits", sa_relationship_kwargs={"cascade": "delete"}
     )
-    repo_id: int = sqlmodel.Field(foreign_key="repo.id")
+    branch_id: int = sqlmodel.Field(foreign_key="branch.id")
 
     processed: Optional[bool] = sqlmodel.Field(default=False)
     run_ok: Optional[bool] = sqlmodel.Field(default=None)

@@ -5,10 +5,12 @@ from datetime import datetime
 import sqlmodel
 from apscheduler.triggers.interval import IntervalTrigger
 from celery import chain, chord
+from sqlalchemy import or_
+
 from db import local_session
 from exception import ClientFailure
-from github import GithubClient
-from model import Account, Commit, Repo, RepoWrite, RunConfig
+from git.github import GithubClient
+from model import Account, Commit, Repo, RepoWrite, RunConfig, Branch
 from scheduler import get_jobs_scheduler
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Session
@@ -62,29 +64,43 @@ def _check_repo_commits(repo_id: int, session: Session):
     #  одновременный прогон контейнров, что нехорошо
     repo = session.get(Repo, repo_id)
 
-    add_check_commits_job_if_not_present(repo.id, repo.account_id)
+    if os.getenv("DEV_MODE", "0") == "0":
+        add_check_commits_job_if_not_present(repo.id, repo.account_id)
 
-    github = GithubClient(repo.account.github_personal_api_token)
+    git_client = GithubClient(repo.account.github_personal_api_token)
 
-    commits = github.get_repo_commits(repo)
+    branches = git_client.get_repo_branches(repo)
 
-    for commit in commits:
-        session.exec(
-            insert(Commit)
-            .values(
-                **commit.dict(
-                    exclude={
-                        "id",
-                    }
+    for branch in branches:
+        branch_found = session.exec(sqlmodel.select(Branch).where(
+            Branch.repo_id == repo.id, Branch.sha == branch.sha)).first()
+        if branch_found is None:
+            session.add(branch)
+            session.commit()
+            session.refresh(branch)
+        else:
+            branch = branch_found
+
+        commits = git_client.get_branch_commits(branch)
+
+        for commit in commits:
+            session.exec(
+                insert(Commit)
+                .values(
+                    **commit.dict(
+                        exclude={
+                            "id",
+                        }
+                    )
                 )
+                # .on_conflict_do_nothing(index_elements=["sha", "branch_id"])
+                .on_conflict_do_nothing(index_elements=Commit.__table_args__[0].columns)
             )
-            .on_conflict_do_nothing(index_elements=["ref", "repo_id"])
-        )
-    session.commit()
+        session.commit()
 
     not_processed_commits = session.exec(
         sqlmodel.select(Commit).where(
-            Commit.repo_id == repo_id, Commit.processed == False
+            or_(*[Commit.branch_id == b.id for b in repo.branches]), Commit.processed == False
         )
     ).all()
 
@@ -93,8 +109,7 @@ def _check_repo_commits(repo_id: int, session: Session):
         for c in not_processed_commits
         if session.exec(
             sqlmodel.select(RunConfig).where(RunConfig.commit_id == c.id)
-        ).all()
-        == []
+        ).all() == []
     ]
 
     logging.debug(
