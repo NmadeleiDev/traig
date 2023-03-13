@@ -22,11 +22,12 @@ class GithubClient(_BaseGitClient):
             )
 
     @staticmethod
-    def construct_repo_path(repo: Repo):
+    def construct_repo_branch_path(branch: Branch):
         save_base_path = os.getenv("REPOS_DOWNLOAD_PATH")
         if not save_base_path:
             raise ServerFailure("REPOS_DOWNLOAD_PATH is not set, unable to save file")
-        return os.path.join(save_base_path, f"{repo.account.id}__{repo.name}")
+        return os.path.join(save_base_path, f"{branch.repo.account.id}__{branch.repo_id}__"
+                                            f"{branch.id}")
 
     def get_repo_branches(self, repo: Repo) -> list[Branch]:
         response = requests.get(
@@ -93,7 +94,7 @@ class GithubClient(_BaseGitClient):
 
         logging.debug(f"got zip from github, headers: {response.headers}")
 
-        repo_path = self.construct_repo_path(repo)
+        repo_path = self.construct_repo_branch_path(commit.branch)
         os.makedirs(repo_path, exist_ok=True)
 
         commit_dir_path = os.path.join(repo_path, commit.sha)

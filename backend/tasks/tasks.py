@@ -118,6 +118,11 @@ def download_commit(account_id: int, commit_id: int):
         github = GithubClient(account.github_personal_api_token)
         commit_dir_path = github.download_and_unzip_commit(commit)
 
+    result_path = os.path.join(commit_dir_path, f"{repo.owner}-{repo.name}-{commit.sha}")
+
+    if not os.path.isdir(result_path):
+        raise FileNotFoundError(f'commit was not downloaded to {result_path}')
+
     return os.path.join(commit_dir_path, f"{repo.owner}-{repo.name}-{commit.sha}")
 
 
