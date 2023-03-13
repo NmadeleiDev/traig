@@ -98,6 +98,8 @@ def _check_repo_commits(repo_id: int, session: Session):
             )
         session.commit()
 
+    session.refresh(repo)
+
     not_processed_commits = session.exec(
         sqlmodel.select(Commit).where(
             or_(*[Commit.branch_id == b.id for b in repo.branches]), Commit.processed == False
